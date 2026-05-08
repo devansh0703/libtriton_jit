@@ -60,15 +60,16 @@ find %{buildroot}%{_libdir} -name "*.so*" -type f -exec patchelf --remove-rpath 
 %files
 %license LICENSE
 %doc README.md
-%{_libdir}/libtriton_jit.so
+%{_libdir}/libtriton_jit.so.*
 %{_datadir}/triton_jit/scripts/*.py
 
 %files devel
 %{_includedir}/triton_jit/
 %{_includedir}/fmt/
+%{_libdir}/libtriton_jit.so
 %{_libdir}/cmake/TritonJIT/
 %{_libdir}/cmake/fmt/
-%{_libdir}/libfmt.so*
+%{_libdir}/libfmt.a
 %{_libdir}/pkgconfig/fmt.pc
 
 %changelog

@@ -182,6 +182,16 @@ to call operators via the dispatcher.
 
 We have examples of pointwise addition and summation.
 
+## Install (Debian/RPM)
+
+Prebuilt packages are published on GitHub releases. Download the runtime and development packages for your distro
+from the release assets and install them with your system package manager:
+
+- Debian/Ubuntu: `sudo dpkg -i libtriton-jit_*.deb libtriton-jit-dev_*.deb`
+- Rocky/RHEL: `sudo rpm -Uvh libtriton-jit-*.rpm libtriton-jit-devel-*.rpm`
+
+CUDA, PyTorch, and Triton must still be available in your runtime environment.
+
 ## How to build
 
 ### Install dependencies

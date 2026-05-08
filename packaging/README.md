@@ -52,9 +52,8 @@ docker build --build-arg BASE_IMAGE=nvidia/cuda:12.4.0-devel-rockylinux8 -f Dock
 
 ## GitHub Actions
 
-The `.github/workflows/build-packages.yml` workflow automatically builds packages on push/PR:
-- Debian packages for Ubuntu 22.04 and 24.04
-- RPM packages for Rocky Linux 8 and 9
+The `.github/workflows/build-deb.yml` and `.github/workflows/build-rpm.yml` workflows automatically build packages on push/PR.
+On tag builds, they upload the generated `.deb` and `.rpm` artifacts to the matching GitHub release.
 
 ## Dependencies
 

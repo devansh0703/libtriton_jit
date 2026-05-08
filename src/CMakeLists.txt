@@ -32,6 +32,11 @@ target_compile_definitions(triton_jit PUBLIC BACKEND_${BACKEND})
 # nlohmann_json is only used in kernel_metadata.cpp, keep it PRIVATE
 target_link_libraries(triton_jit PRIVATE nlohmann_json::nlohmann_json)
 
+set_target_properties(triton_jit PROPERTIES
+  VERSION "${TritonJIT_VERSION}"
+  SOVERSION "${TritonJIT_VERSION_MAJOR}"
+)
+
 # --------------------------- alias targets ---------------------------
 # This is the target used in FetchContent, since FetchContent use add_subdirectory (a sub project build)
 # So to use consistent target name, add namespace here
