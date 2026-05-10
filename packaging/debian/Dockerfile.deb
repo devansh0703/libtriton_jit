@@ -1,10 +1,8 @@
 # Multi-stage Dockerfile to build Debian packages for libtriton-jit
 
 ARG BASE_IMAGE=nvidia/cuda:12.6.0-devel-ubuntu24.04
-ARG BACKEND=CUDA
 FROM ${BASE_IMAGE} AS builder
-
-ENV BACKEND=${BACKEND}
+ARG BACKEND=CUDA
 
 ENV DEBIAN_FRONTEND=noninteractive
 
@@ -41,7 +39,7 @@ RUN if [ -d "packaging/debian" ]; then \
     fi
 
 # Build the Debian package (-d to skip dep checks, deps are container-provided)
-RUN dpkg-buildpackage -us -uc -b -d || \
+RUN BACKEND="${BACKEND}" dpkg-buildpackage -us -uc -b -d || \
     { echo "Build failed, checking logs..."; \
       find /workspace -name "*.log" -exec echo "=== {} ===" \; -exec cat {} \; 2>/dev/null || true; \
       exit 1; }
