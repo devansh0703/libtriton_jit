@@ -55,8 +55,8 @@ jobs:
         if: startsWith(github.ref, 'refs/tags/')
         run: |
           mkdir -p release
-          find output -name "*.rpm" -print0 | while IFS= read -r -d '' rpm; do
-            cp "$rpm" "release/${{ matrix.label }}-$(basename "$rpm")"
+          find output -name "*.rpm" -print0 | while IFS= read -r -d '' rpm_file; do
+            cp "$rpm_file" "release/${{ matrix.label }}-$(basename "$rpm_file")"
           done
 
       - name: Upload RPM packages to GitHub release
