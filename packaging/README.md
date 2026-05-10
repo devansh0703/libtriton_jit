@@ -13,14 +13,21 @@ This directory contains packaging configurations for building Debian (.deb) and 
 
 ```bash
 cd packaging/debian/build-helpers
-./build-libtriton-jit.sh --base-image nvidia/cuda:12.4.0-devel-ubuntu22.04 --output-dir ./output
+./build-libtriton-jit.sh \
+  --base-image nvidia/cuda:12.4.0-devel-ubuntu22.04 \
+  --backend CUDA \
+  --output-dir ./output
 ```
 
 ### Manual build
 
 ```bash
 cd packaging/debian
-docker build --build-arg BASE_IMAGE=nvidia/cuda:12.4.0-devel-ubuntu22.04 -f Dockerfile.deb -t libtriton-jit-builder ../../
+docker build \
+  --build-arg BASE_IMAGE=nvidia/cuda:12.4.0-devel-ubuntu22.04 \
+  --build-arg BACKEND=CUDA \
+  -f Dockerfile.deb \
+  -t libtriton-jit-builder ../../
 ```
 
 ## Building RPM Packages
@@ -29,14 +36,21 @@ docker build --build-arg BASE_IMAGE=nvidia/cuda:12.4.0-devel-ubuntu22.04 -f Dock
 
 ```bash
 cd packaging/rpm
-./build-rpm.sh --base-image nvidia/cuda:12.4.0-devel-rockylinux8 --output-dir ./output
+./build-rpm.sh \
+  --base-image nvidia/cuda:12.4.0-devel-rockylinux8 \
+  --backend CUDA \
+  --output-dir ./output
 ```
 
 ### Manual build
 
 ```bash
 cd packaging/rpm
-docker build --build-arg BASE_IMAGE=nvidia/cuda:12.4.0-devel-rockylinux8 -f Dockerfile.rpm -t libtriton-jit-rpm-builder ../..
+docker build \
+  --build-arg BASE_IMAGE=nvidia/cuda:12.4.0-devel-rockylinux8 \
+  --build-arg BACKEND=CUDA \
+  -f Dockerfile.rpm \
+  -t libtriton-jit-rpm-builder ../..
 ```
 
 ## Package Contents
@@ -78,3 +92,4 @@ On tag builds, they upload the generated `.deb` and `.rpm` artifacts to the matc
 - The packages are built using external dependencies (nlohmann-json, fmt, pybind11) rather than fetching them during build
 - RPATH is removed from the shared libraries during packaging
 - Examples are not built in the packages to reduce build time
+- Use `--backend` (CUDA, IX, MUSA, NPU) with a matching base image that provides the required SDK/toolkit for that backend

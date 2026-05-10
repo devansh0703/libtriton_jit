@@ -6,6 +6,8 @@ export DEB_BUILD_MAINT_OPTIONS = hardening=+all
 # Use all available CPU cores for building
 export DEB_BUILD_OPTIONS = parallel=$(shell nproc)
 
+BACKEND ?= CUDA
+
 %:
 	dh $@
 
@@ -13,6 +15,7 @@ override_dh_auto_configure:
 	dh_auto_configure --buildsystem=cmake -- \
 		-DCMAKE_BUILD_TYPE=Release \
 		-DCMAKE_INSTALL_PREFIX=/usr \
+		-DBACKEND=$(BACKEND) \
 		-DFETCHCONTENT_FULLY_DISCONNECTED=OFF \
 		-DFETCHCONTENT_QUIET=OFF \
 		-DTRITON_JIT_USE_EXTERNAL_JSON=ON \

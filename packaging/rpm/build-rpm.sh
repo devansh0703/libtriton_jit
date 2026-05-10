@@ -2,7 +2,7 @@
 set -e
 
 # libtriton-jit RPM package build script
-# Usage: ./build-rpm.sh [--base-image IMAGE] [--output-dir DIR]
+# Usage: ./build-rpm.sh [--base-image IMAGE] [--backend BACKEND] [--output-dir DIR]
 
 # Colors
 RED='\033[0;31m'
@@ -18,6 +18,7 @@ log_step() { echo -e "${BLUE}[STEP]${NC} $1"; }
 
 # Default values
 BASE_IMAGE="nvidia/cuda:12.4.0-devel-rockylinux8"
+BACKEND="CUDA"
 OUTPUT_DIR=""
 
 # Parse arguments
@@ -27,13 +28,17 @@ while [[ $# -gt 0 ]]; do
             BASE_IMAGE="$2"
             shift 2
             ;;
+        --backend)
+            BACKEND="$2"
+            shift 2
+            ;;
         --output-dir)
             OUTPUT_DIR="$2"
             shift 2
             ;;
         *)
             echo "Unknown option: $1"
-            echo "Usage: $0 [--base-image IMAGE] [--output-dir DIR]"
+            echo "Usage: $0 [--base-image IMAGE] [--backend BACKEND] [--output-dir DIR]"
             exit 1
             ;;
     esac
@@ -50,8 +55,18 @@ fi
 
 log_info "Building libtriton-jit RPM package"
 log_info "Base image: ${BASE_IMAGE}"
+log_info "Backend: ${BACKEND}"
 log_info "Output directory: ${OUTPUT_DIR}"
 log_info "Project root: ${PROJECT_ROOT}"
+
+case "${BACKEND}" in
+    CUDA|IX|MUSA|NPU)
+        ;;
+    *)
+        log_error "Invalid backend: ${BACKEND}. Must be CUDA, IX, MUSA, or NPU."
+        exit 1
+        ;;
+esac
 
 # Create output directory
 mkdir -p "${OUTPUT_DIR}"
@@ -68,6 +83,7 @@ IMAGE_TAG="libtriton-jit-rpm-builder"
 log_step "Building container image: ${IMAGE_TAG}"
 if ! docker build \
     --build-arg BASE_IMAGE="${BASE_IMAGE}" \
+    --build-arg BACKEND="${BACKEND}" \
     -f "${DOCKERFILE}" \
     --target output \
     -t "${IMAGE_TAG}" \

@@ -2,6 +2,7 @@ Name:           libtriton-jit
 Version:        0.1.0
 Release:        1%{?dist}
 Summary:        Triton JIT runtime library
+%global backend CUDA
 
 License:        MIT
 # Note: bundled fmt (MIT with optional exception) is included in the devel subpackage
@@ -41,6 +42,7 @@ TORCH_CMAKE_PATH=$(python3 -c "import importlib.util; s=importlib.util.find_spec
     -GNinja \
     -DCMAKE_BUILD_TYPE=Release \
     -DCMAKE_CUDA_FLAGS="-Xcompiler -fPIE" \
+    -DBACKEND=%{backend} \
     -DTorch_ROOT="${TORCH_CMAKE_PATH}" \
     -DFETCHCONTENT_QUIET=OFF \
     -DTRITON_JIT_USE_EXTERNAL_JSON=OFF \

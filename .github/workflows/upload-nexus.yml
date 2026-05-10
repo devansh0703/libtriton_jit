@@ -1,9 +1,10 @@
 name: Upload to Nexus Repository
 
 on:
-  push:
-    tags:
-      - 'v*'
+  workflow_run:
+    workflows: ["Build Debian Packages", "Build RPM Packages"]
+    types:
+      - completed
   workflow_dispatch:
     inputs:
       run_id:
@@ -13,23 +14,40 @@ on:
 jobs:
   upload:
     runs-on: ubuntu-latest
+    if: |
+      (github.event_name == 'workflow_run' &&
+       github.event.workflow_run.conclusion == 'success' &&
+       startsWith(github.event.workflow_run.head_branch, 'v')) ||
+      github.event_name == 'workflow_dispatch'
 
     steps:
+      - name: Resolve build run context
+        id: run-context
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_run" ]; then
+            echo "run_id=${{ github.event.workflow_run.id }}" >> "$GITHUB_OUTPUT"
+            echo "run_name=${{ github.event.workflow_run.name }}" >> "$GITHUB_OUTPUT"
+          else
+            echo "run_id=${{ github.event.inputs.run_id }}" >> "$GITHUB_OUTPUT"
+          fi
+
       - name: Download deb build artifacts
+        if: github.event_name == 'workflow_dispatch' || steps.run-context.outputs.run_name == 'Build Debian Packages'
         uses: dawidd6/action-download-artifact@v12
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           workflow: build-deb.yml
-          run_id: ${{ github.event.inputs.run_id }}
+          run_id: ${{ steps.run-context.outputs.run_id }}
           workflow_conclusion: success
           path: packages/
 
       - name: Download rpm build artifacts
+        if: github.event_name == 'workflow_dispatch' || steps.run-context.outputs.run_name == 'Build RPM Packages'
         uses: dawidd6/action-download-artifact@v12
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           workflow: build-rpm.yml
-          run_id: ${{ github.event.inputs.run_id }}
+          run_id: ${{ steps.run-context.outputs.run_id }}
           workflow_conclusion: success
           path: packages/
         continue-on-error: true

@@ -25,6 +25,7 @@ jobs:
         include:
           - base_image: "nvidia/cuda:12.6.0-devel-rockylinux9"
             label: "rocky9-cuda1260"
+            backend: "CUDA"
 
     steps:
       - name: Checkout repository
@@ -38,6 +39,7 @@ jobs:
           cd packaging/rpm
           ./build-rpm.sh \
             --base-image "${{ matrix.base_image }}" \
+            --backend "${{ matrix.backend }}" \
             --output-dir "${{ github.workspace }}/output"
 
       - name: Upload RPM packages
@@ -49,8 +51,16 @@ jobs:
             output/srpms/**/*.rpm
           retention-days: 7
 
+      - name: Prepare RPM release assets
+        if: startsWith(github.ref, 'refs/tags/')
+        run: |
+          mkdir -p release
+          find output -name "*.rpm" -print0 | while IFS= read -r -d '' rpm; do
+            cp "$rpm" "release/${{ matrix.label }}-$(basename "$rpm")"
+          done
+
       - name: Upload RPM packages to GitHub release
         if: startsWith(github.ref, 'refs/tags/')
         uses: softprops/action-gh-release@v2
         with:
-          files: output/**/*.rpm
+          files: release/*.rpm

@@ -25,6 +25,7 @@ jobs:
         include:
           - base_image: "nvidia/cuda:12.6.0-devel-ubuntu24.04"
             label: "ubuntu2404-cuda1260"
+            backend: "CUDA"
 
     steps:
       - name: Checkout repository
@@ -38,6 +39,7 @@ jobs:
           cd packaging/debian/build-helpers
           ./build-libtriton-jit.sh \
             --base-image "${{ matrix.base_image }}" \
+            --backend "${{ matrix.backend }}" \
             --output-dir "${{ github.workspace }}/output"
 
       - name: Upload Debian packages
@@ -47,8 +49,16 @@ jobs:
           path: output/*.deb
           retention-days: 7
 
+      - name: Prepare Debian release assets
+        if: startsWith(github.ref, 'refs/tags/')
+        run: |
+          mkdir -p release
+          for deb in output/*.deb; do
+            cp "$deb" "release/${{ matrix.label }}-$(basename "$deb")"
+          done
+
       - name: Upload Debian packages to GitHub release
         if: startsWith(github.ref, 'refs/tags/')
         uses: softprops/action-gh-release@v2
         with:
-          files: output/*.deb
+          files: release/*.deb
