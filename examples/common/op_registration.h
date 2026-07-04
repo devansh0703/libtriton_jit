@@ -2,7 +2,7 @@
 
 #include <torch/torch.h>
 
-#if defined(BACKEND_NPU) || defined(BACKEND_MUSA)
+#if defined(BACKEND_NPU) || defined(BACKEND_MUSA) || defined(BACKEND_GCU)
 #define TRITON_DISPATCH_KEY PrivateUse1
 #else
 #define TRITON_DISPATCH_KEY CUDA

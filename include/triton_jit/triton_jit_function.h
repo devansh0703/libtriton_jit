@@ -69,6 +69,7 @@ enum struct ArgType : int8_t {
   NON_CONSTEXPR = 0,
   SPECIALIZED = 1,
   CONSTEXPR = 2,
+  SPECIALIZED_NO_ALIGNMENT = 3,
 };
 
 struct StaticSignature {
@@ -127,7 +128,12 @@ struct ArgHandle {
     } else if (tp == c10::ScalarType::UInt64) {
       handle_arg_plain(*reinterpret_cast<const uint64_t*>(p));
     } else if (tp == c10::ScalarType::Double) {
+#if defined(BACKEND_GCU)
+      float f = static_cast<float>(*reinterpret_cast<const double*>(p));
+      handle_arg_plain(f);
+#else
       handle_arg_plain(*reinterpret_cast<const double*>(p));
+#endif
     } else {
       throw std::runtime_error("unsupported scalar type.");
     }
@@ -146,6 +152,8 @@ struct ArgHandle {
         handle_constexpr(item);
       } else if (ssig.at(idx) == ArgType::SPECIALIZED) {  // specialized
         handle_specialized(item);
+      } else if (ssig.at(idx) == ArgType::SPECIALIZED_NO_ALIGNMENT) {
+        handle_specialized_no_alignment(item);
       } else {  // ArgType::NON_CONSTEXPR
         handle_non_constexpr(item);
       }
@@ -197,6 +205,26 @@ struct ArgHandle {
       this->buf.push_arg(item);
       std::string sig_for_idx = fmt::format("{}", dtype);
       signature.push_back(sig_for_idx);
+    }
+  }
+
+  template <typename T>
+  void handle_specialized_no_alignment(const T& item) {
+    const char* dtype = triton_type<decltype(item)>::name;
+    if constexpr (std::is_integral_v<std::remove_cv_t<std::remove_reference_t<decltype(item)>>>) {
+      const bool equal_to_1 = item == 1;
+#if defined(BACKEND_NPU)
+      this->buf.push_arg(item);
+      signature.push_back(dtype);
+#else
+      if (!equal_to_1) {
+        this->buf.push_arg(item);
+      }
+      std::string sig_for_idx = fmt::format("{}{}", dtype, equal_to_1 ? ":1" : "");
+      signature.push_back(sig_for_idx);
+#endif
+    } else {
+      handle_non_constexpr(item);
     }
   }
 

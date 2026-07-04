@@ -7,7 +7,7 @@ from typing import List, Tuple, Union
 
 # NPU and MTGPU require this before importing triton
 backend_env = os.environ.get("TRITON_JIT_BACKEND", "").upper()
-if backend_env in ["NPU", "MTGPU"]:
+if backend_env in ["NPU", "MTGPU", "MACA", "GCU"]:
     os.environ["TORCH_DEVICE_BACKEND_AUTOLOAD"] = "0"
 
 import torch  # noqa: E402
@@ -18,6 +18,11 @@ if backend_env == "MTGPU":
         import torch_musa  # noqa: F401 - Activate MUSA device and Triton mtgpu driver
     except ImportError:
         print("Warning: torch_musa not available, MTGPU backend may not work")
+elif backend_env == "GCU":
+    try:
+        import torch_gcu  # noqa: F401 - Activate GCU device and Triton enflame driver
+    except ImportError:
+        print("Warning: torch_gcu not available, GCU backend may not work")
 
 import triton  # noqa: E402
 from packaging.version import Version  # noqa: E402
@@ -268,17 +273,19 @@ def _compile_a_kernel(
                 "cls": "AttrsDescriptor",
             }
         )
-    elif triton_version >= Version("3.3.0"):
+    elif triton_version.major == 3 and triton_version.minor == 3:
         attrs = {(k,): [["tt.divisibility", 16]] for k, v in hints.items() if v == 16}
     elif triton_version.major == 3 and triton_version.minor == 4:
         attrs = {(k,): [["tt.divisibility", 16]] for k, v in hints.items() if v == 16}
     elif triton_version.major == 3 and triton_version.minor == 5:
         attrs = {(k,): [["tt.divisibility", 16]] for k, v in hints.items() if v == 16}
+    elif triton_version.major == 3 and triton_version.minor == 6:
+        attrs = {(k,): [["tt.divisibility", 16]] for k, v in hints.items() if v == 16}
     else:
         raise RuntimeError(
             "Triton may change APIs, we cannot ensure compatibility here now. "
             "You can goto https://github.com/flagos-ai/libtriton_jit to raise an issue "
-            "about supporting your triton version. Triton 3.1/3.2/3.3/3.4/3.5 are supported now."
+            "about supporting your triton version. Triton 3.1/3.2/3.3/3.4/3.5/3.6 are supported now."
         )
 
     # integer 1 in value, but the corresponding ArgType in static signature is not constexpr are added into constants
@@ -290,7 +297,14 @@ def _compile_a_kernel(
             constants[i] = None
             signature_without_spec[i] = "constexpr"
 
-    if Version("3.1.0") <= triton_version < Version("3.2.0"):
+    # GCU backend: downcast fp64 to fp32 in signature to avoid arith.extf
+    # (GCU hardware/compiler does not support double precision operations)
+    if get_backend() == "GCU":
+        for k in signature_without_spec:
+            if signature_without_spec[k] == "fp64":
+                signature_without_spec[k] = "fp32"
+
+    if Version("3.0.0") <= triton_version < Version("3.2.0"):
         src = triton.compiler.ASTSource(
             fn=fn,
             constants=constants,
@@ -338,9 +352,8 @@ def _compile_a_kernel(
 
     # STEP3: ast source, target, compile options (backend-specific)
     backend = get_backend()
-    if backend in ["NPU", "MUSA", "MTGPU"]:
-        # NPU/MUSA/MTGPU: no device context manager
-        # Note: MTGPU is the Triton backend name for MUSA (Moore Threads GPU)
+    if backend in ["NPU", "MUSA", "MTGPU", "MACA", "GCU"]:
+        # NPU/MUSA/MTGPU/MACA/GCU: no CUDA device context manager
         target = triton.runtime.driver.active.get_current_target()
         ccinfo = triton.compile(src, target=target, options=opts)
     else:

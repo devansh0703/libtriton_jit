@@ -13,6 +13,7 @@ class Signature:
     constexpr_indices: List[int]
     non_constexpr_indices: List[int]
     specialised_indices: List[int]
+    specialised_no_alignment_indices: List[int]
 
 
 def static_signature(f: triton.runtime.JITFunction):
@@ -23,10 +24,23 @@ def static_signature(f: triton.runtime.JITFunction):
     specialised_indices = [
         i
         for (i, p) in enumerate(f.params)
-        if (not p.do_not_specialize) and (not p.is_constexpr)
+        if (not p.do_not_specialize)
+        and (not getattr(p, "do_not_specialize_on_alignment", False))
+        and (not p.is_constexpr)
+    ]
+    specialised_no_alignment_indices = [
+        i
+        for (i, p) in enumerate(f.params)
+        if (not p.do_not_specialize)
+        and getattr(p, "do_not_specialize_on_alignment", False)
+        and (not p.is_constexpr)
     ]
     return Signature(
-        arg_num, constexpr_indices, non_constexpr_indices, specialised_indices
+        arg_num,
+        constexpr_indices,
+        non_constexpr_indices,
+        specialised_indices,
+        specialised_no_alignment_indices,
     )
 
 
@@ -50,6 +64,8 @@ def extract_static_signature(source_path, fn_name):
             arg_types.append(2)
         elif i in sig.specialised_indices:
             arg_types.append(1)
+        elif i in sig.specialised_no_alignment_indices:
+            arg_types.append(3)
         else:  # non-specialzed
             arg_types.append(0)
     return arg_types

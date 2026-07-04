@@ -17,6 +17,14 @@
 #endif
 #elif defined(BACKEND_MUSA)
 #include <musa_runtime.h>
+#elif defined(BACKEND_MACA)
+#include <mcr/mc_runtime.h>
+#include "c10/cuda/CUDAStream.h"
+#elif defined(BACKEND_GCU)
+#include <tops_runtime_api.h>
+#elif defined(BACKEND_HCU)
+#include <hip/hip_runtime.h>
+#include "c10/hip/HIPStream.h"
 #else
 #include "c10/cuda/CUDAStream.h"
 #endif
@@ -28,6 +36,12 @@ namespace triton_jit::ops {
 using RawStream = aclrtStream;
 #elif defined(BACKEND_MUSA)
 using RawStream = musaStream_t;
+#elif defined(BACKEND_MACA)
+using RawStream = mcStream_t;
+#elif defined(BACKEND_GCU)
+using RawStream = topsStream_t;
+#elif defined(BACKEND_HCU)
+using RawStream = hipStream_t;
 #else
 using RawStream = CUstream;
 #endif
@@ -42,6 +56,12 @@ inline RawStream get_device_stream([[maybe_unused]] const at::Tensor& t) {
 #endif
 #elif defined(BACKEND_MUSA)
   return nullptr;
+#elif defined(BACKEND_MACA)
+  return reinterpret_cast<mcStream_t>(c10::cuda::getCurrentCUDAStream(t.device().index()).stream());
+#elif defined(BACKEND_GCU)
+  return nullptr;
+#elif defined(BACKEND_HCU)
+  return static_cast<hipStream_t>(c10::hip::getCurrentHIPStream(t.device().index()).stream());
 #else
   return static_cast<CUstream>(c10::cuda::getCurrentCUDAStream(t.device().index()).stream());
 #endif

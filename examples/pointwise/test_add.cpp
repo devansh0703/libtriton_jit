@@ -2,12 +2,13 @@
 #include "add_op.h"
 #include "torch/torch.h"
 #include "triton_jit/backend_config.h"
-
 static at::Device test_device() {
 #if defined(BACKEND_NPU)
   return at::Device("npu:0");
 #elif defined(BACKEND_MUSA)
   return at::Device("musa:0");
+#elif defined(BACKEND_GCU)
+  return at::Device("gcu:0");
 #else
   return at::kCUDA;
 #endif

@@ -26,14 +26,18 @@ static void ensure_initialized() {
     py::gil_scoped_acquire gil;
     py::module_::import("os").attr("environ")["TRITON_JIT_BACKEND"] = BACKEND_NAME;
 
-    // Import backend-specific modules for device registration
     std::string backend_name(BACKEND_NAME);
     if (backend_name == "mtgpu") {
       try {
-        // Import torch_musa to register MUSA as PrivateUse1 backend
         py::module_::import("torch_musa");
       } catch (const py::error_already_set& e) {
         std::cerr << "Warning: Failed to import torch_musa: " << e.what() << std::endl;
+      }
+    } else if (backend_name == "GCU") {
+      try {
+        py::module_::import("torch_gcu");
+      } catch (const py::error_already_set& e) {
+        std::cerr << "Warning: Failed to import torch_gcu: " << e.what() << std::endl;
       }
     }
   });
@@ -129,4 +133,26 @@ template class triton_jit::TritonJITFunctionImpl<triton_jit::IxBackend>;
 #ifdef BACKEND_MUSA
 #include "triton_jit/backends/musa_backend.h"
 template class triton_jit::TritonJITFunctionImpl<triton_jit::MusaBackend>;
+#endif
+
+#ifdef BACKEND_MACA
+#include "triton_jit/backends/maca_backend.h"
+template class triton_jit::TritonJITFunctionImpl<triton_jit::MacaBackend>;
+#endif
+
+#ifdef BACKEND_GCU
+#include "triton_jit/backends/gcu_backend.h"
+template class triton_jit::TritonJITFunctionImpl<triton_jit::GcuBackend>;
+
+namespace {
+struct GcuLibAutoInit {
+  GcuLibAutoInit() { triton_jit::ensure_initialized(); }
+};
+static GcuLibAutoInit gcu_lib_auto_init_;
+}  // namespace
+#endif
+
+#ifdef BACKEND_HCU
+#include "triton_jit/backends/hcu_backend.h"
+template class triton_jit::TritonJITFunctionImpl<triton_jit::HcuBackend>;
 #endif

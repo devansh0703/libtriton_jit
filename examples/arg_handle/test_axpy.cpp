@@ -8,10 +8,18 @@ static at::Device test_device() {
   return at::Device("npu:0");
 #elif defined(BACKEND_MUSA)
   return at::Device("musa:0");
+#elif defined(BACKEND_GCU)
+  return at::Device("gcu:0");
 #else
   return at::kCUDA;
 #endif
 }
+
+#ifdef BACKEND_GCU
+static c10::Scalar make_float_scalar(double v) { return c10::Scalar(static_cast<float>(v)); }
+#else
+static c10::Scalar make_float_scalar(double v) { return c10::Scalar(v); }
+#endif
 
 TEST(axpy_test, scalar_int) {
   at::Tensor a = at::rand({128 * 1024}, test_device());
@@ -26,8 +34,9 @@ TEST(axpy_test, scalar_double) {
   at::Tensor a = at::rand({128 * 1024}, test_device());
   at::Tensor b = at::rand({128 * 1024}, test_device());
 
-  at::Tensor result = my_ops::axpy(a, b, c10::Scalar(3.14));
-  at::Tensor expected = at::add(c10::Scalar(3.14) * a, b);
+  auto alpha = make_float_scalar(3.14);
+  at::Tensor result = my_ops::axpy(a, b, alpha);
+  at::Tensor expected = at::add(alpha * a, b);
   EXPECT_TRUE(torch::allclose(result, expected));
 }
 
@@ -44,7 +53,7 @@ TEST(axpy_test, optional_scalar_has_value) {
   at::Tensor a = at::rand({128 * 1024}, test_device());
   at::Tensor b = at::rand({128 * 1024}, test_device());
 
-  std::optional<c10::Scalar> alpha = c10::Scalar(3.14);
+  std::optional<c10::Scalar> alpha = make_float_scalar(3.14);
   at::Tensor result = my_ops::axpy2(a, b, alpha);
   at::Tensor expected = at::add(alpha.value() * a, b);
   EXPECT_TRUE(torch::allclose(result, expected));
@@ -54,7 +63,7 @@ TEST(axpy_test, optional_tensor_has_value) {
   at::Tensor a = at::rand({128 * 1024}, test_device());
   std::optional<at::Tensor> b = at::rand({128 * 1024}, test_device());
 
-  c10::Scalar alpha(3.14);
+  c10::Scalar alpha = make_float_scalar(3.14);
   at::Tensor result = my_ops::axpy3(a, b, alpha);
   at::Tensor expected = at::add(alpha * a, b.value());
   EXPECT_TRUE(torch::allclose(result, expected));
@@ -64,7 +73,7 @@ TEST(axpy_test, optional_tensor_nullopt) {
   at::Tensor a = at::rand({128 * 1024}, test_device());
   std::optional<at::Tensor> b = std::nullopt;
 
-  c10::Scalar alpha(3.14);
+  c10::Scalar alpha = make_float_scalar(3.14);
   at::Tensor result = my_ops::axpy3(a, b, alpha);
   at::Tensor expected = alpha * a;
   EXPECT_TRUE(torch::allclose(result, expected));

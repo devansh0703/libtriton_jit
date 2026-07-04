@@ -14,6 +14,11 @@
 #include "acl/acl.h"
 #elif defined(BACKEND_MUSA)
 #include <musa.h>
+#elif defined(BACKEND_MACA)
+#include <mcr/mc_runtime.h>
+#elif defined(BACKEND_GCU)
+#elif defined(BACKEND_HCU)
+#include <hip/hip_runtime.h>
 #else
 #include "cuda.h"
 #endif
@@ -143,6 +148,38 @@ inline void __checkMusaErrors(MUresult code, const char* file, const int line) {
     fprintf(stderr,
             "MUSA Driver API error = %04d from file <%s>, line %i. Detail: <%s>\n",
             code,
+            file,
+            line,
+            error_string);
+    throw std::runtime_error(error_string);
+  }
+}
+#elif defined(BACKEND_MACA)
+#define checkMacaErrors(err) __checkMacaErrors(err, __FILE__, __LINE__)
+
+inline void __checkMacaErrors(mcError_t code, const char* file, const int line) {
+  if (code != mcSuccess) {
+    const char* error_string = mcGetErrorString(code);
+    fprintf(stderr,
+            "MACA Runtime API error = %04d from file <%s>, line %i. Detail: <%s>\n",
+            code,
+            file,
+            line,
+            error_string);
+    throw std::runtime_error(error_string ? error_string : "Unknown MACA error");
+  }
+}
+#elif defined(BACKEND_GCU)
+// GCU error handling is done inline in gcu_backend.h
+#elif defined(BACKEND_HCU)
+#define checkHcuErrors(err) __checkHcuErrors(err, __FILE__, __LINE__)
+
+inline void __checkHcuErrors(hipError_t code, const char* file, const int line) {
+  if (code != hipSuccess) {
+    const char* error_string = hipGetErrorString(code);
+    fprintf(stderr,
+            "HCU Runtime API error = %04d from file <%s>, line %i. Detail: <%s>\n",
+            static_cast<int>(code),
             file,
             line,
             error_string);
